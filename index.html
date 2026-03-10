@@ -3,369 +3,430 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>黄金行情 · AU9999</title>
+<title>黄金行情报告 · AU9999</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-  :root {
-    --gold: #b8922a;
-    --gold-light: #f5e6c0;
-    --up: #d0021b;
-    --down: #0a7c42;
-    --text: #111;
-    --muted: #888;
-    --border: #e8e8e8;
-    --bg: #fafafa;
-    --white: #fff;
-    --radius: 12px;
-  }
-
-  html { font-size: 16px; }
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
   body {
-    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", Arial, sans-serif;
-    background: var(--bg);
-    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica Neue', sans-serif;
+    background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
     min-height: 100vh;
+    padding: 32px 20px 48px;
+    color: #fff;
     -webkit-font-smoothing: antialiased;
   }
 
-  /* ── Layout ── */
-  .page {
-    max-width: 720px;
-    margin: 0 auto;
-    padding: 24px 16px 48px;
-  }
+  .container { max-width: 960px; margin: 0 auto; }
 
   /* ── Header ── */
   .header {
-    display: flex;
-    align-items: baseline;
-    gap: 10px;
-    margin-bottom: 28px;
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 28px; flex-wrap: wrap; gap: 12px;
   }
-  .header h1 {
-    font-size: 1.25rem;
-    font-weight: 700;
-    letter-spacing: -.3px;
-    color: var(--text);
+  .header-left { display: flex; align-items: center; gap: 14px; }
+  .gold-icon {
+    width: 50px; height: 50px; border-radius: 14px;
+    background: linear-gradient(135deg, #FFD700, #FFA500);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px; box-shadow: 0 4px 20px rgba(255,215,0,0.35);
+    flex-shrink: 0;
   }
-  .header .meta {
-    font-size: .78rem;
-    color: var(--muted);
+  .header-title h1 { font-size: 20px; font-weight: 700; letter-spacing: 0.3px; }
+  .header-title p  { font-size: 12px; color: rgba(255,255,255,0.5); margin-top: 3px; }
+  .live-badge {
+    display: flex; align-items: center; gap: 7px;
+    background: rgba(255,215,0,0.12); border: 1px solid rgba(255,215,0,0.35);
+    color: #FFD700; padding: 6px 14px; border-radius: 20px;
+    font-size: 11px; font-weight: 600; letter-spacing: 0.5px; white-space: nowrap;
   }
-  .dot {
-    display: inline-block;
-    width: 6px; height: 6px;
-    border-radius: 50%;
-    background: #22c55e;
-    margin-right: 5px;
-    animation: blink 2s infinite;
+  .live-dot {
+    width: 6px; height: 6px; border-radius: 50%; background: #FFD700;
+    animation: pulse 2s infinite;
   }
-  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(1.4)} }
 
-  /* ── Stats strip ── */
-  .stats {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 1px;
-    background: var(--border);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    overflow: hidden;
+  /* ── KPI Grid ── */
+  .kpi-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 14px; margin-bottom: 20px;
+  }
+  .kpi-card {
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.11);
+    border-radius: 16px; padding: 20px 16px;
+    backdrop-filter: blur(12px);
+    transition: transform .2s, box-shadow .2s;
+  }
+  .kpi-card:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(0,0,0,0.35); }
+  .kpi-label { font-size: 10px; color: rgba(255,255,255,0.45); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+  .kpi-value { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1; }
+  .kpi-sub   { font-size: 11px; margin-top: 6px; }
+
+  .c-gold  { color: #FFD700; }
+  .c-up    { color: #4ADE80; }
+  .c-down  { color: #F87171; }
+  .c-muted { color: rgba(255,255,255,0.4); }
+
+  /* ── Chart Card ── */
+  .chart-card {
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.11);
+    border-radius: 20px; padding: 26px;
+    backdrop-filter: blur(12px);
     margin-bottom: 20px;
   }
-  .stat {
-    background: var(--white);
-    padding: 16px 14px;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
+  .card-header {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    margin-bottom: 22px; flex-wrap: wrap; gap: 10px;
   }
-  .stat .s-label {
-    font-size: .72rem;
-    color: var(--muted);
-    letter-spacing: .3px;
+  .card-title    { font-size: 15px; font-weight: 600; }
+  .card-subtitle { font-size: 11px; color: rgba(255,255,255,0.45); margin-top: 3px; }
+  .legend-row { display: flex; gap: 14px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: rgba(255,255,255,0.55); }
+  .legend-dot  { width: 8px; height: 8px; border-radius: 50%; }
+  .chart-wrap  { position: relative; height: 260px; }
+
+  /* ── Table Card ── */
+  .table-card {
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.11);
+    border-radius: 20px; padding: 26px;
+    backdrop-filter: blur(12px);
+    margin-bottom: 20px;
+    overflow-x: auto;
+  }
+  .section-title { font-size: 14px; font-weight: 600; margin-bottom: 18px; }
+
+  table { width: 100%; border-collapse: collapse; min-width: 480px; }
+  th {
+    font-size: 10px; text-transform: uppercase; letter-spacing: 1px;
+    color: rgba(255,255,255,0.38); padding: 0 14px 12px; text-align: left;
     white-space: nowrap;
   }
-  .stat .s-val {
-    font-size: 1.05rem;
-    font-weight: 700;
-    letter-spacing: -.5px;
-    line-height: 1;
+  th:not(:first-child) { text-align: right; }
+  td {
+    padding: 13px 14px; font-size: 13px;
+    border-top: 1px solid rgba(255,255,255,0.06);
+    white-space: nowrap;
   }
-  .stat .s-sub {
-    font-size: .72rem;
-    color: var(--muted);
-  }
-  .stat.today { background: #fffbf0; }
-  .stat.today .s-val { color: var(--gold); font-size: 1.3rem; }
+  td:not(:first-child) { text-align: right; }
+  tbody tr:hover td { background: rgba(255,255,255,0.04); }
+  tbody tr.today-row td { background: rgba(255,215,0,0.05); }
 
-  /* ── Chart ── */
-  .card {
-    background: var(--white);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 20px;
-    margin-bottom: 16px;
-  }
-  .card-title {
-    font-size: .78rem;
-    font-weight: 600;
-    color: var(--muted);
-    text-transform: uppercase;
-    letter-spacing: .8px;
-    margin-bottom: 16px;
-  }
-  .chart-wrap { position: relative; height: 200px; }
+  .td-date  { font-weight: 500; }
+  .td-price { font-weight: 700; font-variant-numeric: tabular-nums; color: #FFD700; }
+  .closed-row td { color: rgba(255,255,255,0.25); }
+  .closed-row .td-price { color: rgba(255,255,255,0.2); }
 
-  /* ── Table ── */
-  .price-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: .875rem;
+  .today-tag {
+    display: inline-block; background: rgba(255,215,0,0.2);
+    color: #FFD700; font-size: 10px; font-weight: 700;
+    padding: 1px 6px; border-radius: 4px; margin-left: 6px; vertical-align: middle;
   }
-  .price-table thead th {
-    text-align: left;
-    font-size: .72rem;
-    font-weight: 600;
-    color: var(--muted);
-    text-transform: uppercase;
-    letter-spacing: .5px;
-    padding: 0 10px 10px;
-    border-bottom: 1px solid var(--border);
+  .pill {
+    display: inline-flex; align-items: center; gap: 3px;
+    padding: 3px 9px; border-radius: 20px; font-size: 11px; font-weight: 600;
   }
-  .price-table thead th:not(:first-child) { text-align: right; }
-  .price-table tbody td {
-    padding: 11px 10px;
-    border-bottom: 1px solid var(--border);
-    vertical-align: middle;
-  }
-  .price-table tbody tr:last-child td { border-bottom: none; }
-  .price-table tbody td:not(:first-child) { text-align: right; }
-
-  .price-table .td-date { font-weight: 500; }
-  .price-table .td-day  { color: var(--muted); font-size: .8rem; }
-  .price-table .td-price { font-weight: 700; font-variant-numeric: tabular-nums; }
-  .price-table .closed td { color: #bbb; }
-  .price-table .today-row .td-date::after {
-    content: "今";
-    background: var(--gold-light);
-    color: var(--gold);
-    font-size: .65rem;
-    font-weight: 700;
-    padding: 1px 4px;
-    border-radius: 4px;
-    margin-left: 5px;
-    vertical-align: middle;
-  }
-  .price-table .today-row .td-price { color: var(--gold); }
-
-  .badge {
+  .pill-up   { background: rgba(74,222,128,0.15);  color: #4ADE80; }
+  .pill-down { background: rgba(248,113,113,0.15); color: #F87171; }
+  .pill-flat { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.5); }
+  .pill-off  { background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.25); }
+  .event-tag {
     display: inline-block;
-    font-size: .75rem;
-    font-weight: 600;
-    padding: 2px 7px;
-    border-radius: 20px;
+    background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.1);
+    padding: 2px 9px; border-radius: 20px; font-size: 11px;
+    color: rgba(255,255,255,0.5);
   }
-  .badge-up   { color: var(--up);   background: #fff0f1; }
-  .badge-down { color: var(--down); background: #f0faf5; }
-  .badge-flat { color: var(--muted);background: #f5f5f5; }
-  .badge-off  { color: #ccc;        background: #f9f9f9; }
+
+  /* ── Analysis ── */
+  .analysis-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 14px; margin-bottom: 20px;
+  }
+  .analysis-card {
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.11);
+    border-radius: 16px; padding: 20px;
+    backdrop-filter: blur(12px);
+  }
+  .analysis-card h3 {
+    font-size: 10px; color: rgba(255,255,255,0.45);
+    text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px;
+  }
+  .analysis-card p { font-size: 13px; color: rgba(255,255,255,0.75); line-height: 1.75; }
 
   /* ── Footer ── */
   .footer {
-    text-align: center;
-    margin-top: 32px;
-    font-size: .74rem;
-    color: #bbb;
-    line-height: 1.8;
+    text-align: center; font-size: 11px;
+    color: rgba(255,255,255,0.25); letter-spacing: 0.3px; line-height: 1.8;
   }
 
-  /* ── Mobile tweaks ── */
-  @media (max-width: 480px) {
-    .stats { grid-template-columns: repeat(2, 1fr); }
-    .stat.today .s-val { font-size: 1.15rem; }
-    .chart-wrap { height: 160px; }
-    .price-table { font-size: .82rem; }
-    .price-table thead th,
-    .price-table tbody td { padding-left: 6px; padding-right: 6px; }
-    /* hide "week" col on very small screens */
-    .col-week { display: none; }
+  /* ── Responsive ── */
+  @media (max-width: 680px) {
+    body { padding: 20px 14px 40px; }
+    .kpi-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .kpi-value { font-size: 18px; }
+    .analysis-grid { grid-template-columns: 1fr; }
+    .chart-wrap { height: 200px; }
+    .header-title h1 { font-size: 17px; }
+  }
+  @media (max-width: 400px) {
+    .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+    .live-badge span:last-child { display: none; }
   }
 </style>
 </head>
 <body>
-<div class="page">
+<div class="container">
 
   <!-- Header -->
   <div class="header">
-    <h1>黄金行情</h1>
-    <span class="meta"><span class="dot"></span>AU9999 · 近7日</span>
+    <div class="header-left">
+      <div class="gold-icon">🥇</div>
+      <div class="header-title">
+        <h1>黄金现货行情报告</h1>
+        <p>上海黄金交易所 · AU9999 · 近7日数据</p>
+      </div>
+    </div>
+    <div class="live-badge">
+      <div class="live-dot"></div>
+      <span>2026-03-10 更新</span>
+    </div>
   </div>
 
-  <!-- Stats -->
-  <div class="stats" id="statsStrip"></div>
+  <!-- KPI -->
+  <div class="kpi-grid" id="kpiGrid"></div>
 
   <!-- Chart -->
-  <div class="card">
-    <div class="card-title">收盘价走势（元/克）</div>
-    <div class="chart-wrap"><canvas id="chart"></canvas></div>
+  <div class="chart-card">
+    <div class="card-header">
+      <div>
+        <div class="card-title">价格走势图</div>
+        <div class="card-subtitle">AU9999 每日收盘价（元/克）</div>
+      </div>
+      <div class="legend-row">
+        <div class="legend-item"><div class="legend-dot" style="background:#FFD700"></div>收盘价</div>
+        <div class="legend-item"><div class="legend-dot" style="background:rgba(74,222,128,0.5);border-radius:2px;width:16px;height:2px"></div>趋势</div>
+      </div>
+    </div>
+    <div class="chart-wrap"><canvas id="priceChart"></canvas></div>
   </div>
 
   <!-- Table -->
-  <div class="card">
-    <div class="card-title">每日明细</div>
-    <table class="price-table">
+  <div class="table-card">
+    <div class="section-title">📋 每日明细</div>
+    <table>
       <thead>
         <tr>
           <th>日期</th>
-          <th class="col-week">周</th>
           <th>收盘价</th>
-          <th>涨跌额</th>
           <th>涨跌幅</th>
+          <th>涨跌额</th>
+          <th>市场事件</th>
         </tr>
       </thead>
       <tbody id="tableBody"></tbody>
     </table>
   </div>
 
-  <div class="footer">
-    数据来源：上海黄金交易所 &nbsp;·&nbsp; 仅供参考，不构成投资建议<br>
-    更新时间：2026年3月10日
+  <!-- Analysis -->
+  <div class="analysis-grid">
+    <div class="analysis-card">
+      <h3>📈 行情驱动</h3>
+      <p>本周美伊地缘冲突升温一度将国内金价推至 <strong class="c-gold">¥1,152</strong>，随后美元走强与非农数据低于预期引发回调，黄金承压至 <strong class="c-down">¥1,134</strong> 后企稳反弹。</p>
+    </div>
+    <div class="analysis-card">
+      <h3>🔭 关键关注</h3>
+      <p>短期支撑位 <strong class="c-up">¥1,130</strong>，上方压力 <strong class="c-down">¥1,155</strong>。关注美联储议息动向及美元指数走势，若地缘风险持续，金价仍有上行空间。</p>
+    </div>
   </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    数据来源：上海黄金交易所 AU9999 现货价格 &nbsp;|&nbsp; 仅供参考，不构成投资建议<br>
+    本报告由 AI 自动生成 · 更新于 2026-03-10
+  </div>
+
 </div>
 
 <script>
 const DATA = [
-  { date:'03/04', week:'三', price:1152.34, open:true },
-  { date:'03/05', week:'四', price:1139.35, open:true },
-  { date:'03/06', week:'五', price:1136.00, open:true },
-  { date:'03/07', week:'六', price:null,    open:false },
-  { date:'03/08', week:'日', price:null,    open:false },
-  { date:'03/09', week:'一', price:1134.61, open:true },
-  { date:'03/10', week:'二', price:1147.00, open:true, today:true },
+  { date:'3/4(三)',  price:1152.34, open:true,  event:'地缘冲突推升' },
+  { date:'3/5(四)',  price:1139.35, open:true,  event:'美元走强压制' },
+  { date:'3/6(五)',  price:1136.00, open:true,  event:'非农数据疲软' },
+  { date:'3/7(六)',  price:null,    open:false, event:'' },
+  { date:'3/8(日)',  price:null,    open:false, event:'' },
+  { date:'3/9(一)',  price:1134.61, open:true,  event:'冲高后回调' },
+  { date:'3/10(二)', price:1147.00, open:true,  event:'降息预期升温', today:true },
 ];
 
-const trading = DATA.filter(d => d.open);
-const prices  = trading.map(d => d.price);
-const today   = DATA[DATA.length - 1];
-const hi      = Math.max(...prices);
-const lo      = Math.min(...prices);
-const hiDay   = trading[prices.indexOf(hi)];
-const loDay   = trading[prices.indexOf(lo)];
-const prevClose = trading[trading.length - 2].price;
-const change  = today.price - prevClose;
-const changePct = (change / prevClose * 100).toFixed(2);
+const trading   = DATA.filter(d => d.open);
+const prices    = trading.map(d => d.price);
+const today     = trading[trading.length - 1];
+const prev      = trading[trading.length - 2];
+const hi        = Math.max(...prices);
+const lo        = Math.min(...prices);
+const hiDay     = trading[prices.indexOf(hi)];
+const loDay     = trading[prices.indexOf(lo)];
+const chg       = today.price - prev.price;
+const chgPct    = (chg / prev.price * 100).toFixed(2);
+const weekChg   = today.price - trading[0].price;
+const weekPct   = (weekChg / trading[0].price * 100).toFixed(2);
 
-/* ── Stats ── */
-const statsData = [
-  { label:'今日收盘', val:`¥${today.price.toFixed(2)}`, sub: (change>=0?'▲ +':' ▼ ')+Math.abs(change).toFixed(2)+' ('+Math.abs(changePct)+'%)', updown: change>=0?'up':'down', today:true },
-  { label:'7日最高',  val:`¥${hi.toFixed(2)}`,          sub:`${hiDay.date} 周${hiDay.week}` },
-  { label:'7日最低',  val:`¥${lo.toFixed(2)}`,          sub:`${loDay.date} 周${loDay.week}` },
-  { label:'7日振幅',  val:`¥${(hi-lo).toFixed(2)}`,     sub:`±${((hi-lo)/lo*100).toFixed(2)}%` },
+/* KPI */
+const kpiData = [
+  {
+    label:'今日收盘', val:`¥${today.price.toFixed(2)}`,
+    sub: `${chg>=0?'▲ +':'▼ '}${Math.abs(chg).toFixed(2)} (${Math.abs(chgPct)}%)`,
+    valClass:'c-gold', subClass: chg>=0?'c-up':'c-down'
+  },
+  { label:'7日最高', val:`¥${hi.toFixed(2)}`,          sub:hiDay.date,   valClass:'c-up',   subClass:'c-muted' },
+  { label:'7日最低', val:`¥${lo.toFixed(2)}`,          sub:loDay.date,   valClass:'c-down', subClass:'c-muted' },
+  {
+    label:'7日累计', val:`${weekChg>=0?'+':''}${weekPct}%`,
+    sub:`¥${trading[0].price} → ¥${today.price}`,
+    valClass: weekChg>=0?'c-up':'c-down', subClass:'c-muted'
+  },
 ];
-const strip = document.getElementById('statsStrip');
-statsData.forEach(s => {
-  const el = document.createElement('div');
-  el.className = 'stat' + (s.today ? ' today' : '');
-  const color = s.updown === 'up' ? 'var(--up)' : s.updown === 'down' ? 'var(--down)' : '';
-  el.innerHTML = `
-    <span class="s-label">${s.label}</span>
-    <span class="s-val">${s.val}</span>
-    <span class="s-sub" style="${color?'color:'+color:''}">${s.sub}</span>`;
-  strip.appendChild(el);
+const grid = document.getElementById('kpiGrid');
+kpiData.forEach(k => {
+  grid.innerHTML += `
+    <div class="kpi-card">
+      <div class="kpi-label">${k.label}</div>
+      <div class="kpi-value ${k.valClass}">${k.val}</div>
+      <div class="kpi-sub ${k.subClass}">${k.sub}</div>
+    </div>`;
 });
 
-/* ── Chart ── */
-const ctx = document.getElementById('chart').getContext('2d');
-const grad = ctx.createLinearGradient(0,0,0,200);
-grad.addColorStop(0,'rgba(184,146,42,0.12)');
-grad.addColorStop(1,'rgba(184,146,42,0)');
+/* Chart */
+const ctx = document.getElementById('priceChart').getContext('2d');
+const grad = ctx.createLinearGradient(0, 0, 0, 260);
+grad.addColorStop(0,   'rgba(255,215,0,0.30)');
+grad.addColorStop(0.6, 'rgba(255,215,0,0.06)');
+grad.addColorStop(1,   'rgba(255,215,0,0)');
+
+// Simple linear trend line
+const n = prices.length;
+const xMean = (n - 1) / 2;
+const yMean = prices.reduce((a, b) => a + b, 0) / n;
+const slope = prices.reduce((s, y, i) => s + (i - xMean) * (y - yMean), 0) /
+              prices.reduce((s, _, i) => s + (i - xMean) ** 2, 0);
+const intercept = yMean - slope * xMean;
+const trendLine = prices.map((_, i) => +(intercept + slope * i).toFixed(2));
 
 new Chart(ctx, {
   type: 'line',
   data: {
     labels: trading.map(d => d.date),
-    datasets: [{
-      data: prices,
-      borderColor: '#b8922a',
-      borderWidth: 2,
-      backgroundColor: grad,
-      fill: true,
-      tension: 0.3,
-      pointRadius: 4,
-      pointBackgroundColor: prices.map((p,i) =>
-        i===0 ? '#b8922a' : p>prices[i-1] ? '#d0021b' : '#0a7c42'),
-      pointBorderColor: '#fff',
-      pointBorderWidth: 1.5,
-      pointHoverRadius: 6,
-    }]
+    datasets: [
+      {
+        label: '收盘价',
+        data: prices,
+        borderColor: '#FFD700',
+        borderWidth: 2.5,
+        backgroundColor: grad,
+        fill: true,
+        tension: 0.4,
+        pointBackgroundColor: prices.map((p, i) =>
+          i === 0 ? '#FFD700' : p > prices[i-1] ? '#4ADE80' : '#F87171'),
+        pointBorderColor: '#1a1240',
+        pointBorderWidth: 2,
+        pointRadius: 6,
+        pointHoverRadius: 9,
+        order: 1,
+      },
+      {
+        label: '趋势线',
+        data: trendLine,
+        borderColor: 'rgba(74,222,128,0.45)',
+        borderWidth: 1.5,
+        borderDash: [6, 4],
+        backgroundColor: 'transparent',
+        fill: false,
+        tension: 0,
+        pointRadius: 0,
+        order: 2,
+      }
+    ]
   },
   options: {
     responsive: true,
     maintainAspectRatio: false,
+    interaction: { mode: 'index', intersect: false },
     plugins: {
       legend: { display: false },
       tooltip: {
-        backgroundColor: '#111',
-        titleColor: '#f5e6c0',
-        bodyColor: '#fff',
-        padding: 10,
-        cornerRadius: 8,
-        displayColors: false,
+        backgroundColor: 'rgba(15,10,40,0.95)',
+        borderColor: 'rgba(255,215,0,0.25)',
+        borderWidth: 1,
+        titleColor: '#FFD700',
+        bodyColor: 'rgba(255,255,255,0.75)',
+        padding: 12,
+        cornerRadius: 10,
         callbacks: {
-          title: i => `${i[0].label}（周${trading[i[0].dataIndex].week}）`,
-          label: i => `¥ ${i.raw.toFixed(2)} 元/克`
+          title: items => items[0].label,
+          label: item => ` ${item.dataset.label}：¥ ${item.raw.toFixed(2)}`
         }
       }
     },
     scales: {
-      x: { grid:{display:false}, ticks:{color:'#aaa',font:{size:11}} },
+      x: {
+        grid:  { color: 'rgba(255,255,255,0.05)', drawBorder: false },
+        ticks: { color: 'rgba(255,255,255,0.45)', font: { size: 11 } }
+      },
       y: {
-        min: Math.min(...prices)-6,
-        max: Math.max(...prices)+6,
-        grid:{ color:'#f0f0f0', drawBorder:false },
-        ticks:{ color:'#aaa', font:{size:11}, callback: v=>'¥'+v }
+        min: Math.min(...prices) - 8,
+        max: Math.max(...prices) + 8,
+        grid:  { color: 'rgba(255,255,255,0.05)', drawBorder: false },
+        ticks: { color: 'rgba(255,255,255,0.45)', font: { size: 11 }, callback: v => '¥' + v }
       }
-    },
-    interaction:{ mode:'index', intersect:false }
+    }
   }
 });
 
-/* ── Table ── */
+/* Table */
 const tbody = document.getElementById('tableBody');
 DATA.forEach((row, i) => {
   const tr = document.createElement('tr');
-  if (!row.open) tr.className = 'closed';
-  if (row.today) tr.className = 'today-row';
+  if (!row.open) { tr.className = 'closed-row'; }
+  else if (row.today) { tr.className = 'today-row'; }
 
   let prevPrice = null;
-  for (let j=i-1; j>=0; j--) { if(DATA[j].open){prevPrice=DATA[j].price; break;} }
+  for (let j = i - 1; j >= 0; j--) { if (DATA[j].open) { prevPrice = DATA[j].price; break; } }
 
-  let changeHtml='', pctHtml='';
+  let priceTd, changePill, pctPill;
+
   if (!row.open) {
-    changeHtml = `<span class="badge badge-off">休市</span>`;
-    pctHtml = '—';
-  } else if (prevPrice===null) {
-    changeHtml = '<span class="badge badge-flat">基准</span>';
-    pctHtml = '—';
+    priceTd    = '—';
+    changePill = `<span class="pill pill-off">休市</span>`;
+    pctPill    = '—';
   } else {
-    const d = row.price - prevPrice;
-    const p = (d/prevPrice*100).toFixed(2);
-    const cls = d>0?'up':d<0?'down':'flat';
-    const sign = d>0?'▲ +':'▼ ';
-    changeHtml = `<span class="badge badge-${cls}">${sign}${Math.abs(d).toFixed(2)}</span>`;
-    pctHtml = `<span class="badge badge-${cls}">${d>0?'+':''}${p}%</span>`;
+    const todayTag = row.today ? '<span class="today-tag">今日</span>' : '';
+    priceTd = `<span class="td-price">¥ ${row.price.toFixed(2)}</span>${todayTag}`;
+    if (prevPrice === null) {
+      changePill = `<span class="pill pill-flat">基准</span>`;
+      pctPill    = '—';
+    } else {
+      const d   = row.price - prevPrice;
+      const pct = (d / prevPrice * 100).toFixed(2);
+      const cls = d > 0 ? 'up' : d < 0 ? 'down' : 'flat';
+      const sgn = d > 0 ? '▲ +' : '▼ ';
+      changePill = `<span class="pill pill-${cls}">${sgn}${Math.abs(pct)}%</span>`;
+      pctPill    = `<span class="pill pill-${cls}">${d > 0 ? '+' : ''}${d.toFixed(2)}</span>`;
+    }
   }
+
+  const eventCell = row.event
+    ? `<span class="event-tag">${row.event}</span>`
+    : '—';
 
   tr.innerHTML = `
     <td class="td-date">${row.date}</td>
-    <td class="td-day col-week">${row.week}</td>
-    <td class="td-price">${row.open ? '¥ '+row.price.toFixed(2) : '—'}</td>
-    <td>${changeHtml}</td>
-    <td>${pctHtml}</td>`;
+    <td>${priceTd}</td>
+    <td>${changePill}</td>
+    <td>${pctPill}</td>
+    <td>${eventCell}</td>`;
   tbody.appendChild(tr);
 });
 </script>
